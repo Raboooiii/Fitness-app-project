@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 app.use(cors(
   {
-    origin: ["fitness-app-back.vercel.app"],
+    origin: ["oadra.vercel.app"],
     methods: ["POST","GET"],
     credentials: true
   }
