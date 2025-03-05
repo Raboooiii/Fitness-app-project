@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 app.use(cors(
   {
-    origin: ["oadra.vercel.app"],
+    origin: ["https://oadra.vercel.app"],
     methods: ["POST","GET"],
     credentials: true
   }
