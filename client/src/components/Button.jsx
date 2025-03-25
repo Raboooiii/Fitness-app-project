@@ -82,7 +82,7 @@ const button = ({
 }) => {
   return (
     <Button
-      onClick={() => !isDisabled && !isLoading && onClick()}
+      onClick={() => !isDisabled && !isLoading && onClick?.()}
       isDisabled={isDisabled}
       type={type}
       isLoading={isLoading}
