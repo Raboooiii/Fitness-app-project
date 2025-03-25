@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { createError } from "../error.js";
 import User from "../models/User.js";
 import Workout from "../models/Workout.js";
+import { google } from "googleapis";
 
 dotenv.config();
 
@@ -25,6 +26,9 @@ export const UserRegister = async (req, res, next) => {
       email,
       password: hashedPassword,
       img,
+      xp: 0,          // Initialize with 0 XP
+      streak: 0,       // Initialize with 0 streak
+      lastActive: null // No last active date yet
     });
     const createdUser = await user.save();
     const token = jwt.sign({ id: createdUser._id }, process.env.JWT, {
@@ -225,10 +229,8 @@ export const addWorkout = async (req, res, next) => {
     if (!workoutString) {
       return next(createError(400, "Workout string is missing"));
     }
-
     // Split workoutString into lines
-    const eachworkout = workoutString.split("\n").map((line) => line.trim());
-
+    const eachworkout = workoutString.split(";").map((line) => line.trim());
     // Check if any workouts start with "#" to indicate categories
     const categories = eachworkout.filter((line) => line.startsWith("#"));
     if (categories.length === 0) {
@@ -237,24 +239,44 @@ export const addWorkout = async (req, res, next) => {
 
     const parsedWorkouts = [];
     let currentCategory = "";
+    let count = 0;
 
     // Loop through each line to parse workout details
-    eachworkout.forEach((line) => {
+    await eachworkout.forEach((line) => {
+      count++;
       if (line.startsWith("#")) {
-        currentCategory = line.substring(1).trim();
-      } else if (line.startsWith("-")) {
-        const workoutDetails = parseWorkoutLine(line);
+        const parts = line?.split("\n").map((part) => part.trim());
+        console.log(parts);
+        if (parts.length < 5) {
+          return next(
+            createError(400, `Workout string is missing for ${count}th workout`)
+          );
+        }
+
+        // Update current category
+        currentCategory = parts[0].substring(1).trim();
+        // Extract workout details
+        const workoutDetails = parseWorkoutLine(parts);
+        if (workoutDetails == null) {
+          return next(createError(400, "Please enter in proper format "));
+        }
+
         if (workoutDetails) {
+          // Add category to workout details
           workoutDetails.category = currentCategory;
           parsedWorkouts.push(workoutDetails);
         }
+      } else {
+        return next(
+          createError(400, `Workout string is missing for ${count}th workout`)
+        );
       }
     });
 
     // Calculate calories burnt for each workout
-    parsedWorkouts.forEach(async (workout) => {
+    await parsedWorkouts.forEach(async (workout) => {
       workout.caloriesBurned = parseFloat(calculateCaloriesBurnt(workout));
-      await Workout.create({ ...workout, user: userId }); // Allow duplicates
+      await Workout.create({ ...workout, user: userId });
     });
 
     return res.status(201).json({
@@ -264,6 +286,24 @@ export const addWorkout = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+};
+
+// Function to parse workout details from a line
+const parseWorkoutLine = (parts) => {
+  const details = {};
+  console.log(parts);
+  if (parts.length >= 5) {
+    details.workoutName = parts[1].substring(1).trim();
+    details.sets = parseInt(parts[2].split("sets")[0].substring(1).trim());
+    details.reps = parseInt(
+      parts[2].split("sets")[1].split("reps")[0].substring(1).trim()
+    );
+    details.weight = parseFloat(parts[3].split("kg")[0].substring(1).trim());
+    details.duration = parseFloat(parts[4].split("min")[0].substring(1).trim());
+    console.log(details);
+    return details;
+  }
+  return null;
 };
 
 // controllers/User.js
@@ -310,7 +350,7 @@ export const getProfile = async (req, res, next) => {
     const currentDate = new Date();
     const timeDiff = currentDate - signupDate;
     const totalDays = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-    
+
     return res.status(200).json({
       ...user._doc,
       totalDays,
@@ -324,6 +364,99 @@ export const getProfile = async (req, res, next) => {
 const calculateCaloriesBurnt = (workoutDetails) => {
   const durationInMinutes = parseInt(workoutDetails.duration);
   const weightInKg = parseInt(workoutDetails.weight);
-  const caloriesBurntPerMinute = 0.01; // Sample value, actual calculation may vary
+  const caloriesBurntPerMinute = 5; // Sample value, actual calculation may vary
   return durationInMinutes * caloriesBurntPerMinute * weightInKg;
+};
+
+const fitness = google.fitness("v1");
+
+export const getFitnessData = async (accessToken) => {
+  const oauth2Client = new google.auth.OAuth2();
+  oauth2Client.setCredentials({ access_token: accessToken });
+
+  const now = new Date();
+  const startTime = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+  const endTime = new Date().toISOString();
+
+  // Fetch steps data
+  const stepsResponse = await fitness.users.dataset.aggregate({
+    userId: "me",
+    requestBody: {
+      aggregateBy: [
+        {
+          dataTypeName: "com.google.step_count.delta",
+          dataSourceId:
+            "derived:com.google.step_count.delta:com.google.android.gms:estimated_steps",
+        },
+      ],
+      bucketByTime: { durationMillis: 86400000 }, // 24 hours
+      startTimeMillis: new Date(startTime).getTime(),
+      endTimeMillis: new Date(endTime).getTime(),
+    },
+    auth: oauth2Client,
+  });
+
+  const steps = stepsResponse.data.bucket[0].dataset[0].point[0]?.value[0]?.intVal || 0;
+
+  // Fetch distance data
+  const distanceResponse = await fitness.users.dataset.aggregate({
+    userId: "me",
+    requestBody: {
+      aggregateBy: [
+        {
+          dataTypeName: "com.google.distance.delta",
+          dataSourceId:
+            "derived:com.google.distance.delta:com.google.android.gms:merge_distance_delta",
+        },
+      ],
+      bucketByTime: { durationMillis: 86400000 }, // 24 hours
+      startTimeMillis: new Date(startTime).getTime(),
+      endTimeMillis: new Date(endTime).getTime(),
+    },
+    auth: oauth2Client,
+  });
+
+  const distance = distanceResponse.data.bucket[0].dataset[0].point[0]?.value[0]?.fpVal || 0;
+
+  // Fetch calories data
+  const caloriesResponse = await fitness.users.dataset.aggregate({
+    userId: "me",
+    requestBody: {
+      aggregateBy: [
+        {
+          dataTypeName: "com.google.calories.expended",
+          dataSourceId:
+            "derived:com.google.calories.expended:com.google.android.gms:merge_calories_expended",
+        },
+      ],
+      bucketByTime: { durationMillis: 86400000 }, // 24 hours
+      startTimeMillis: new Date(startTime).getTime(),
+      endTimeMillis: new Date(endTime).getTime(),
+    },
+    auth: oauth2Client,
+  });
+
+  const calories = caloriesResponse.data.bucket[0].dataset[0].point[0]?.value[0]?.fpVal || 0;
+
+  // Fetch heart rate data
+  const heartRateResponse = await fitness.users.dataset.aggregate({
+    userId: "me",
+    requestBody: {
+      aggregateBy: [
+        {
+          dataTypeName: "com.google.heart_rate.bpm",
+          dataSourceId:
+            "derived:com.google.heart_rate.bpm:com.google.android.gms:merge_heart_rate_bpm",
+        },
+      ],
+      bucketByTime: { durationMillis: 86400000 }, // 24 hours
+      startTimeMillis: new Date(startTime).getTime(),
+      endTimeMillis: new Date(endTime).getTime(),
+    },
+    auth: oauth2Client,
+  });
+
+  const heartRate = heartRateResponse.data.bucket[0].dataset[0].point[0]?.value[0]?.fpVal || 0;
+
+  return { steps, distance, calories, heartRate };
 };
