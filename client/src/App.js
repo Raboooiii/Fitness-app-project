@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Workouts from "./pages/Workouts";
 import Profile from "./pages/Profile";
 import UpdateProfile from "./pages/UpdateProfile";
+import Running from "./pages/Running"; // Import the Running page
 
 const Container = styled.div`
   width: 100%;
@@ -35,6 +36,7 @@ function App() {
               <Route path="/workouts" exact element={<Workouts />} />
               <Route path="/profile" exact element={<Profile />} />
               <Route path="/update-profile" exact element={<UpdateProfile />} />
+              <Route path="/running" exact element={<Running />} />
             </Routes>
           </Container>
         ) : (
