@@ -53,9 +53,8 @@ const NavLogo = styled(LinkR)`
   font-weight: 600;
   font-size: 18px;
   text-decoration: none;
-  color: ${({ theme }) => theme.white}; // Set logo text to white
+  color: ${({ theme }) => theme.white};
 `;
-
 
 const UserContainer = styled.div`
   width: 100%;
@@ -83,6 +82,7 @@ const TextButton = styled.div`
     color: ${({ theme }) => theme.primary};
   }
 `;
+
 const IconButton = styled(NavLink)`
   display: flex;
   flex-direction: column;
@@ -148,11 +148,12 @@ const Navlink = styled(NavLink)`
 const Logo = styled.img`
   height: 42px;
 `;
+
 const Mobileicon = styled.div`
   color: ${({ theme }) => theme.text_primary};
   display: none;
   @media screen and (max-width: 768px) {
-    display: none; // Hide the mobile menu icon
+    display: none;
   }
 `;
 
@@ -195,16 +196,16 @@ const Navbar = ({ currentUser }) => {
         <MobileMenu isOpen={isOpen}>
           <Navlink to="/">Dashboard</Navlink>
           <Navlink to="/workouts">Workouts</Navlink>
+          <Navlink to="/running">Running</Navlink> {/* Add this line */}
           <Navlink to="/tutorials">Leaderboard</Navlink>
-          <Navlink to="/blogs">Running</Navlink>
           <Navlink to="/profile">Profile</Navlink>
         </MobileMenu>
 
         <NavItems>
           <Navlink to="/">Dashboard</Navlink>
           <Navlink to="/workouts">Workouts</Navlink>
+          <Navlink to="/running">Running</Navlink> {/* Add this line */}
           <Navlink to="/tutorials">Leaderboard</Navlink>
-          <Navlink to="/blogs">Running</Navlink>
           <Navlink to="/profile">Profile</Navlink>
         </NavItems>
 
