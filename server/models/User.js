@@ -44,6 +44,18 @@ const UserSchema = new mongoose.Schema(
     totalDays: {
       type: Number, // Total days using the app
     },
+    xp: {
+      type: Number,
+      default: 0,
+    },
+    lastActive: {
+      type: Date,
+      default: Date.now,
+    },
+    streak: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
