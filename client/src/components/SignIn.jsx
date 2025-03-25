@@ -1,3 +1,4 @@
+// src/components/SignIn.jsx
 import React, { useState } from "react";
 import styled from "styled-components";
 import TextInput from "./TextInput";
@@ -5,6 +6,7 @@ import Button from "./Button";
 import { UserSignIn } from "../api";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../redux/reducers/userSlice";
+import SuccessModal from "./SuccessModal";
 
 const Container = styled.div`
   width: 100%;
@@ -26,7 +28,7 @@ const Span = styled.div`
   color: ${({ theme }) => theme.text_secondary + 90};
 `;
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Email validation regex
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const SignIn = () => {
   const dispatch = useDispatch();
@@ -34,56 +36,61 @@ const SignIn = () => {
   const [buttonDisabled, setButtonDisabled] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const validateInputs = () => {
     if (!email || !password) {
       alert("Please fill in all fields");
       return false;
     }
-  
-    // Validate email format
+
     if (!emailRegex.test(email)) {
-      console.log("Invalid email format:", email); // Debugging log
+      console.log("Invalid email format:", email);
       alert("Please enter a valid email address");
       return false;
     }
-  
-    console.log("Email is valid:", email); // Debugging log
+
+    console.log("Email is valid:", email);
     return true;
   };
 
   const handleSignIn = async () => {
     setLoading(true);
     setButtonDisabled(true);
-    // Validate inputs before making the API call
+    
     if (!validateInputs()) {
-      setLoading(false); // Reset loading state
-      setButtonDisabled(false); // Reset buttonDisabled state
+      setLoading(false);
+      setButtonDisabled(false);
       return;
     }
-    if (validateInputs()) {
-      try {
-        const response = await UserSignIn({ email, password });
-        if (response && response.data) {
-          dispatch(loginSuccess(response.data));
-          alert("Login Success");
-        } else {
-          alert("Invalid response from server");
-        }
-      } catch (err) {
-        console.error("SignIn Error:", err);
-        alert(err.response?.data?.message || "An error occurred during sign-in");
-      } finally {
-        setLoading(false);
-        setButtonDisabled(false);
+
+    try {
+      const response = await UserSignIn({ email, password });
+      if (response && response.data) {
+        dispatch(loginSuccess(response.data));
+        setShowSuccessModal(true);
+      } else {
+        alert("Invalid response from server");
       }
+    } catch (err) {
+      console.error("SignIn Error:", err);
+      alert(err.response?.data?.message || "An error occurred during sign-in");
+    } finally {
+      setLoading(false);
+      setButtonDisabled(false);
     }
   };  
 
   return (
     <Container>
+      {showSuccessModal && (
+        <SuccessModal 
+          message="You have successfully logged in!" 
+          onClose={() => setShowSuccessModal(false)} 
+        />
+      )}
       <div>
-        <Title>Welcome to Oadra 👋</Title>
+        <Title>Welcome to Qadra 💤</Title>
         <Span>Please login with your details here</Span>
       </div>
       <div
@@ -107,7 +114,7 @@ const SignIn = () => {
           handelChange={(e) => setPassword(e.target.value)}
         />
         <Button
-          text="SignIn"
+          text="Sign In"
           onClick={handleSignIn}
           isLoading={loading}
           isDisabled={buttonDisabled}
