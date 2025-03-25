@@ -1,9 +1,10 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const WorkoutSchema = new mongoose.Schema({
   workoutName: {
     type: String,
-    required: true, // No unique constraint
+    required: true,
+    unique: true, // No unique constraint
   },
   category: {
     type: String,
@@ -31,7 +32,7 @@ const WorkoutSchema = new mongoose.Schema({
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: 'User',
     required: true,
   },
   date: {
@@ -42,4 +43,4 @@ const WorkoutSchema = new mongoose.Schema({
   { timestamps: true }
 );
 
-export default mongoose.model("Workout", WorkoutSchema);
+export default mongoose.model('Workout', WorkoutSchema);
