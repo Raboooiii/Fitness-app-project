@@ -7,6 +7,7 @@ import { UserSignUp } from "../api";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../redux/reducers/userSlice";
 import { useNavigate } from "react-router-dom";
+import SuccessModal from "./SuccessModal";
 
 const Container = styled.div`
   width: 100%;
@@ -28,8 +29,6 @@ const Span = styled.div`
   color: ${({ theme }) => theme.text_secondary + 90};
 `;
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Email validation regex
-
 const SignUp = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -38,54 +37,47 @@ const SignUp = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const validateInputs = () => {
     if (!name || !email || !password) {
       alert("Please fill in all fields");
       return false;
     }
-  
-    // Validate email format
-    if (!emailRegex.test(email)) {
-      console.log("Invalid email format:", email); // Debugging log
-      alert("Please enter a valid email address");
-      return false;
-    }
-  
-    console.log("Email is valid:", email); // Debugging log
     return true;
   };
 
-const handelSignUp = async () => {
+  const handelSignUp = async () => {
     setLoading(true);
     setButtonDisabled(true);
-    if (!validateInputs()) {
-      setLoading(false); // Reset loading state
-      setButtonDisabled(false); // Reset buttonDisabled state
-      return;
-    }
     if (validateInputs()) {
       try {
         const response = await UserSignUp({ name, email, password });
         if (response && response.data) {
           dispatch(loginSuccess(response.data));
-          alert("Account Created Success");
-          navigate("/setup-profile");
-        } else {
-          alert("Invalid response from server");
+          setShowSuccessModal(true);
         }
       } catch (err) {
-        console.error("SignUp Error:", err);
-        alert(err.response?.data?.message || "An error occurred during sign-up");
-      } finally {
+        alert(err.response?.data?.message || "An error occurred");
         setLoading(false);
         setButtonDisabled(false);
       }
     }
   };
 
+  const handleModalClose = () => {
+    setShowSuccessModal(false);
+    navigate("/setup-profile");
+  };
+
   return (
     <Container>
+      {showSuccessModal && (
+        <SuccessModal 
+          message="Account created successfully! You'll be redirected to setup your profile."
+          onClose={handleModalClose}
+        />
+      )}
       <div>
         <Title>Create New Account 👋</Title>
         <Span>Please enter details to create a new account</Span>
@@ -117,7 +109,7 @@ const handelSignUp = async () => {
           handelChange={(e) => setPassword(e.target.value)}
         />
         <Button
-          text="SignUp"
+          text="Sign Up"
           onClick={handelSignUp}
           isLoading={loading}
           isDisabled={buttonDisabled}
